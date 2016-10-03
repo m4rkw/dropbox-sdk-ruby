@@ -829,9 +829,9 @@ class DropboxClient
   #
   # Args:
   # * +file_obj+: The file-like object to be uploaded.  Must support .read()
-  # * +total_size+: The total size of file_obj
-  def get_chunked_uploader(file_obj, total_size)
-    ChunkedUploader.new(self, file_obj, total_size)
+  # * +total_size+: The total size of file_obj [optional]
+  def get_chunked_uploader(file_obj, total_size=nil)
+    ChunkedUploader.new(self, file_obj, total_size=nil)
   end
 
   # ChunkedUploader is responsible for uploading a large file to Dropbox in smaller chunks.
@@ -856,9 +856,13 @@ class DropboxClient
     def upload(chunk_size=4*1024*1024)
       last_chunk = nil
 
-      while @offset < @total_size
+      while 1
         if not last_chunk
           last_chunk = @file_obj.read(chunk_size)
+        end
+
+        if @total_size.nil? and (last_chunk.nil? or last_chunk.length == 0)
+          break
         end
 
         resp = {}
@@ -884,6 +888,10 @@ class DropboxClient
           last_chunk = nil
         end
         @upload_id = resp['upload_id'] if resp['upload_id']
+
+        if !@total_size.nil? and @offset >= @total_size
+          break
+        end
       end
     end
 
